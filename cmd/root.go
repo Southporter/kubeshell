@@ -24,6 +24,7 @@ package cmd
 import (
 	"fmt"
 	"os"
+
 	"github.com/spf13/cobra"
 
 	homedir "github.com/mitchellh/go-homedir"
@@ -66,7 +67,7 @@ func init() {
 
 	// Cobra also supports local flags, which will only run
 	// when this action is called directly.
-	rootCmd.Flags().BoolP("toggle", "t", false, "Help message for toggle")
+	rootCmd.PersistentFlags().StringP("kubeconfig", "k", "", "Kubernetes config file to use for this shell session")
 }
 
 // initConfig reads in config file and ENV variables if set.
