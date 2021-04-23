@@ -32,7 +32,7 @@ func NewPrompt(s *State) Prompt {
 }
 
 func (p *Prompt) Get() (string, error) {
-	prompt := fmt.Sprintf("%s:%s$ ", "cluster", "namespace")
+	prompt := fmt.Sprintf("%s:%s$ ", p.config.cluster, p.config.namespace)
 	if input, err := p.liner.Prompt(prompt); err == nil {
 		return input, err
 	} else if err == liner.ErrPromptAborted {
