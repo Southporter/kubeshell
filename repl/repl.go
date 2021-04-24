@@ -7,28 +7,32 @@ import (
 
 	"github.com/fatih/color"
 	"github.com/spf13/cobra"
+
+	"github.com/ssedrick/kubeshell/repl/builtins"
+	"github.com/ssedrick/kubeshell/repl/cmd"
+	"github.com/ssedrick/kubeshell/repl/state"
 )
 
-type commandHandler = func(args []string) error
-
-func listCommand(args []string) error {
-	println("namespace\tpods\tservices")
-	println("")
-	return nil
-}
+type commandHandler = func(*cmd.Command) error
 
 var commands = map[string]commandHandler{
-	"ls": listCommand,
+	"ls":  builtins.Ls,
+	"pwd": builtins.Pwd,
+	"cd":  builtins.Cd,
 }
 
-func handleCommand(command string) {
+func handleCommand(command string, state *state.State) {
 	if command == "" {
 		return
 	}
 	parts := strings.Split(command, " ")
 	c := parts[0]
 	if handler, ok := commands[c]; ok {
-		err := handler(parts[1:])
+		cmd := &cmd.Command{
+			Args:  parts[1:],
+			State: state,
+		}
+		err := handler(cmd)
 		if err != nil {
 			color.Red("Command Not Found")
 		}
@@ -37,7 +41,7 @@ func handleCommand(command string) {
 
 func Start(cmd *cobra.Command, args []string) {
 	// Set up kube client
-	s := NewState()
+	s := state.NewState()
 	if err := s.Load(cmd); err != nil {
 		log.Println("Error loading kubernetes state")
 		os.Exit(2)
@@ -54,6 +58,6 @@ func Start(cmd *cobra.Command, args []string) {
 		}
 		log.Print("Got input: ", input)
 
-		handleCommand(input)
+		handleCommand(input, &s)
 	}
 }

@@ -1,4 +1,4 @@
-package repl
+package state
 
 import (
 	"errors"
@@ -10,9 +10,8 @@ import (
 )
 
 type State struct {
+	Namespace string
 	cwd       string
-	namespace string
-	cluster   string
 	config    *clientcmd.ClientConfig
 	client    *kubernetes.Clientset
 	raw       *clientapi.Config
@@ -21,8 +20,7 @@ type State struct {
 func NewState() State {
 	return State{
 		cwd:       "/",
-		namespace: "",
-		cluster:   "",
+		Namespace: "",
 		config:    nil,
 		client:    nil,
 	}
@@ -45,7 +43,7 @@ func (s *State) Load(cmd *cobra.Command) error {
 	if err != nil {
 		return errors.New("Could not get namespace from config")
 	}
-	s.namespace = namespace
+	s.Namespace = namespace
 
 	config, err := kubeConfig.ClientConfig()
 	if err != nil {
@@ -57,7 +55,6 @@ func (s *State) Load(cmd *cobra.Command) error {
 		return errors.New("Could not load raw config")
 	}
 	s.raw = &rawConfig
-	s.cluster = s.raw.CurrentContext
 
 	client, err := kubernetes.NewForConfig(config)
 	if err != nil {
@@ -67,4 +64,12 @@ func (s *State) Load(cmd *cobra.Command) error {
 	s.client = client
 
 	return nil
+}
+
+func (s *State) CurrentDirectory() string {
+	return s.cwd
+}
+
+func (s *State) CurrentCluster() string {
+	return s.raw.CurrentContext
 }

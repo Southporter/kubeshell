@@ -5,6 +5,7 @@ import (
 	"log"
 
 	"github.com/peterh/liner"
+	"github.com/ssedrick/kubeshell/repl/state"
 )
 
 type Config struct {
@@ -15,17 +16,17 @@ type Config struct {
 type Prompt struct {
 	config Config
 	liner  *liner.State
-	state  *State
+	state  *state.State
 }
 
-func NewPrompt(s *State) Prompt {
+func NewPrompt(s *state.State) Prompt {
 	l := liner.NewLiner()
 	l.SetCtrlCAborts(true)
 	return Prompt{
 		state: s,
 		config: Config{
-			s.namespace,
-			s.cluster,
+			namespace: s.Namespace,
+			cluster:   s.CurrentCluster(),
 		},
 		liner: l,
 	}
