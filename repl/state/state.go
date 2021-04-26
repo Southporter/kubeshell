@@ -2,27 +2,31 @@ package state
 
 import (
 	"errors"
+	"os"
+
+	"golang.org/x/term"
 
 	"github.com/spf13/cobra"
+	"k8s.io/client-go/discovery"
 	"k8s.io/client-go/kubernetes"
+	"k8s.io/client-go/rest"
 	"k8s.io/client-go/tools/clientcmd"
 	clientapi "k8s.io/client-go/tools/clientcmd/api"
 )
 
 type State struct {
-	Namespace string
-	cwd       string
-	config    *clientcmd.ClientConfig
-	client    *kubernetes.Clientset
-	raw       *clientapi.Config
+	Namespace  string
+	cwd        string
+	config     *clientcmd.ClientConfig
+	client     *kubernetes.Clientset
+	raw        *clientapi.Config
+	restConfig *rest.Config
 }
 
 func NewState() State {
 	return State{
 		cwd:       "/",
 		Namespace: "",
-		config:    nil,
-		client:    nil,
 	}
 }
 
@@ -50,6 +54,8 @@ func (s *State) Load(cmd *cobra.Command) error {
 		return errors.New("Could not get client config from kubeconfig")
 	}
 
+	s.restConfig = config
+
 	rawConfig, err := kubeConfig.RawConfig()
 	if err != nil {
 		return errors.New("Could not load raw config")
@@ -72,4 +78,13 @@ func (s *State) CurrentDirectory() string {
 
 func (s *State) CurrentCluster() string {
 	return s.raw.CurrentContext
+}
+
+func (s *State) ToDiscoveryClient() (discovery.DiscoveryInterface, error) {
+	return discovery.NewDiscoveryClientForConfig(s.restConfig)
+}
+
+func (s *State) GetTerminalWidth() (int, error) {
+	width, _, err := term.GetSize(int(os.Stdin.Fd()))
+	return width, err
 }
