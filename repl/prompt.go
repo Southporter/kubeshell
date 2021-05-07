@@ -5,26 +5,25 @@ import (
 	"log"
 
 	"github.com/peterh/liner"
+	"github.com/ssedrick/kubeshell/repl/display"
 	"github.com/ssedrick/kubeshell/repl/state"
 )
 
 type Prompt struct {
-	liner *liner.State
-	state *state.State
+	state   *state.State
+	display *display.Display
 }
 
 func NewPrompt(s *state.State) Prompt {
-	l := liner.NewLiner()
-	l.SetCtrlCAborts(true)
 	return Prompt{
-		state: s,
-		liner: l,
+		state:   s,
+		display: &display.NewDisplay(),
 	}
 }
 
 func (p *Prompt) Get() (string, error) {
 	prompt := fmt.Sprintf("%s:%s$ ", p.state.CurrentCluster(), p.state.Namespace)
-	if input, err := p.liner.Prompt(prompt); err == nil {
+	if input, err := p.display.Prompt(prompt); err == nil {
 		return input, err
 	} else if err == liner.ErrPromptAborted {
 		log.Print("Got err aborted")

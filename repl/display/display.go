@@ -1,7 +1,6 @@
 package display
 
 import (
-	"io"
 	"os"
 
 	"golang.org/x/term"
@@ -13,31 +12,21 @@ type Display struct {
 }
 
 type IO struct {
-	Reader io.Reader
-	Writer io.Writer
 }
 
-type input struct {
-}
-
-func Read(b []byte) (int, error) {
+func (i *IO) Read(b []byte) (int, error) {
 	return os.Stdin.Read(b)
 }
 
-type output struct {
-}
-
-func (o *output) Write(b []byte) (int, error) {
+func (o *IO) Write(b []byte) (int, error) {
 	return os.Stdout.Write(b)
 }
 
 func NewDisplay(prompt string) Display {
-	com := IO{
-		Reader: Read,
-		Writer: output{},
+	com := &IO{
 	}
 	return Display{
-		terminal: &term.NewTerminal(com, prompt),
+		terminal: term.NewTerminal(com, prompt),
 	}
 }
 
