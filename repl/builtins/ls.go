@@ -2,11 +2,12 @@ package builtins
 
 import (
 	"errors"
+	"fmt"
 	"log"
 	"strings"
 
-	"github.com/fatih/color"
 	"github.com/ssedrick/kubeshell/repl/cmd"
+	"github.com/ssedrick/kubeshell/repl/display"
 )
 
 func printAllApiResources(cmd *cmd.Command, namespaced bool) error {
@@ -19,20 +20,23 @@ func printAllApiResources(cmd *cmd.Command, namespaced bool) error {
 		return err
 	}
 
-	resources := []string{}
+  displayOptions := display.DefaultOptions()
+  displayOptions.ChangeDirection(display.TopToBottom)
+  resources := display.NewGridWithOptions(displayOptions)
 	for _, item := range list {
 		if len(item.APIResources) != 0 {
 			for _, resource := range item.APIResources {
 				if len(resource.Verbs) != 0 {
 					if namespaced == resource.Namespaced {
-						name := color.BlueString(resource.Name)
-						resources = append(resources, name)
+            cell := display.NewCell(resource.Name)
+            resources.AddCell(&cell)
 					}
 				}
 			}
 		}
 	}
-	return nil
+  screen := display.NewScreen(&resources)
+  return screen.Print()
 }
 
 func pathToFolders(cwd string) []string {

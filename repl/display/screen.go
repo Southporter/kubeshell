@@ -1,6 +1,11 @@
 package display
 
-import "errors"
+import (
+  "errors"
+  "os"
+  
+  "golang.org/x/term"
+)
 
 type Screen struct {
   grid *Grid
@@ -17,7 +22,33 @@ func (s *Screen) FitToWidth(max int) error {
 }
 
 func (s *Screen) guessNumLines(max int) int {
-  return max
+  guessMinNum := 0
+  totalSoFar := 0
+  numCells := len(s.grid.cells)
+  cells := reverse(s.grid.cells)
+  for _, c := range cells {
+    if c.width + totalSoFar <= max {
+      guessMinNum += 1;
+      totalSoFar += c.width
+    } else {
+      guessMaxLines := numCells / guessMinNum
+      if numCells % guessMinNum != 0 {
+        guessMaxLines += 1
+      }
+      return guessMaxLines
+    }
+    totalSoFar += s.grid.options.padding.Width()
+  }
+  return 1
+}
+
+func reverse(cells []*Cell) []*Cell {
+  numCells := len(cells)
+  reversed := make([]*Cell, numCells)
+  for i, c := range cells {
+    reversed[numCells - i - 1] = c
+  }
+  return reversed
 }
 
 func getCellWidths(cells []*Cell) []int {
@@ -33,14 +64,32 @@ func sumWidths(widths []int) int {
   for _, w := range widths {
     sum += w;
   }
-  return w
+  return sum
 }
 
-func getColumnWidths(numLines int, numColumns int) *Dimensions {
+func (s *Screen) getColumnWidths(numLines int, numColumns int) *Dimensions {
+  widths := make([]int, numColumns)
+  for i, c := range s.grid.cells {
+    index := i
+    switch s.grid.options.direction {
+    case LeftToRight:
+      index = i % numColumns
+    case TopToBottom:
+      index = i / numLines
+    }
+    widths[index] = max(widths[index], c.width)
+  }
   return &Dimensions{
-    widths: []int{},
+    widths: widths,
     lines: numLines,
   }
+}
+
+func max(a int, b int) int {
+  if a > b {
+    return a
+  }
+  return b
 }
 
 func (s *Screen) dimensionsFromWidth(max int) (*Dimensions, error) {
@@ -86,7 +135,7 @@ func (s *Screen) dimensionsFromWidth(max int) (*Dimensions, error) {
     }
 
     adjustedWidth := max - totalSeparatorWidth;
-    potentialDimensions := getColumnWidths(lines, numColumns)
+    potentialDimensions := s.getColumnWidths(lines, numColumns)
 
     if sumWidths(potentialDimensions.widths) < adjustedWidth {
       smallestDimensions = potentialDimensions
@@ -97,4 +146,35 @@ func (s *Screen) dimensionsFromWidth(max int) (*Dimensions, error) {
   return smallestDimensions, nil
 }
 
+func (s *Screen) Print() error {
+  width, _, err := term.GetSize(int(os.Stdin.Fd()))
+  if err != nil {
+    return err
+  }
+  dimensions, err := s.dimensionsFromWidth(width)
+  if err != nil {
+    return err
+  }
+  numWidths := len(dimensions.widths)
+  numCells := len(s.grid.cells)
+  for y := 0; y < dimensions.lines; y++ {
+    for x := 0; x < numWidths; x++ {
+      index := 0
+      switch s.grid.options.direction {
+      case LeftToRight:
+        index = y * numWidths + x
+      case TopToBottom:
+        index = y + dimensions.lines * x
+      }
+      if index >= numCells {
+        continue
+      }
 
+      cell := s.grid.cells[index]
+      if x == numWidths - 1 {
+
+      }
+    }
+  }
+  return nil
+}

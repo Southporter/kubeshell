@@ -71,12 +71,17 @@ type GridOptions struct {
   padding Padding
 }
 
-func defaultOptions() *GridOptions {
+func DefaultOptions() *GridOptions {
   return &GridOptions{
     direction: LeftToRight,
     padding: NewWhitespacePadding(2),
   }
 }
+
+func (g *GridOptions) ChangeDirection(direction Direction) {
+  g.direction = direction
+}
+
 
 type Dimensions struct {
   lines int
@@ -108,9 +113,9 @@ type Grid struct {
 }
 
 func NewGrid() Grid {
-  cells := []Cell{}
+  cells := []*Cell{}
   return Grid{
-    options: defaultOptions(),
+    options: DefaultOptions(),
     cells: cells,
     widestCell: 0,
     totalWidth: 0,
