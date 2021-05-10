@@ -8,6 +8,8 @@ package display
  *****************************************/
 
 import (
+  "fmt"
+  "strings"
   "unicode/utf8"
 )
 
@@ -21,7 +23,7 @@ const (
 type Cell struct {
   content string
   width int
-  aligment Alignment
+  alignment Alignment
 }
 
 func NewCell(content string) Cell {
@@ -63,6 +65,16 @@ func NewTextPadding(t string) Padding {
 
 func (p *Padding) Width() int {
   return p.spaces + utf8.RuneCountInString(p.text)
+}
+
+func (p *Padding) Padding(alignment Alignment) string {
+  switch alignment {
+  case Left:
+    return fmt.Sprintf("%s%s", strings.Repeat(" ", p.spaces), p.text)
+  case Right:
+    return fmt.Sprintf("%s%s", p.text, strings.Repeat(" ", p.spaces))
+  }
+  return ""
 }
 
 

@@ -2,7 +2,6 @@ package builtins
 
 import (
 	"errors"
-	"fmt"
 	"log"
 	"strings"
 
@@ -29,6 +28,7 @@ func printAllApiResources(cmd *cmd.Command, namespaced bool) error {
 				if len(resource.Verbs) != 0 {
 					if namespaced == resource.Namespaced {
             cell := display.NewCell(resource.Name)
+            log.Println("Cell: ", resource.Name)
             resources.AddCell(&cell)
 					}
 				}

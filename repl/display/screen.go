@@ -2,7 +2,10 @@ package display
 
 import (
   "errors"
+  "fmt"
   "os"
+  "strings"
+  "log"
   
   "golang.org/x/term"
 )
@@ -166,13 +169,30 @@ func (s *Screen) Print() error {
       case TopToBottom:
         index = y + dimensions.lines * x
       }
+      log.Printf("x: %d, y: %d, index: %d\n", x, y, index)
       if index >= numCells {
         continue
       }
 
       cell := s.grid.cells[index]
       if x == numWidths - 1 {
-
+        switch cell.alignment {
+        case Left:
+          fmt.Printf("%s\n", cell.content)
+        case Right:
+          extraSpaces := dimensions.widths[x] - cell.width
+          fmt.Printf("%s%s\n", strings.Repeat(" ", extraSpaces), cell.content)
+        }
+      } else {
+        filling := s.grid.options.padding.Padding(cell.alignment)
+        switch cell.alignment {
+        case Left:
+          extraSpaces := dimensions.widths[x] - cell.width - len(filling)
+          fmt.Printf("%s%s%s", cell.content, strings.Repeat(" ", extraSpaces), filling)
+        case Right:
+          extraSpaces := dimensions.widths[x] - cell.width - len(filling)
+          fmt.Printf("%s%s%s", strings.Repeat(" ", extraSpaces), cell.content, filling)
+        }
       }
     }
   }
