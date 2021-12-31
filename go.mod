@@ -6,6 +6,7 @@ require (
 	github.com/docker/spdystream v0.0.0-20160310174837-449fdfce4d96 // indirect
 	github.com/fatih/color v1.10.0 // indirect
 	github.com/go-delve/delve v1.6.0 // indirect
+	github.com/golang/glog v1.0.0 // indirect
 	github.com/gophercloud/gophercloud v0.0.0-20190126172459-c818fa66e4c8 // indirect
 	github.com/mattn/go-runewidth v0.0.12 // indirect
 	github.com/mitchellh/go-homedir v1.1.0 // indirect
@@ -25,6 +26,6 @@ require (
 	gopkg.in/gemnasium/logrus-airbrake-hook.v2 v2.1.2 // indirect
 	k8s.io/cli-runtime v0.21.0 // indirect
 	k8s.io/client-go v0.21.0 // indirect
-	k8s.io/klog v0.3.1 // indirect
+	k8s.io/klog v1.0.0 // indirect
 	sigs.k8s.io/kustomize v2.0.3+incompatible // indirect
 )

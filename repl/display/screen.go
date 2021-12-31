@@ -1,200 +1,237 @@
 package display
 
 import (
-  "errors"
-  "fmt"
-  "os"
-  "strings"
-  "log"
-  
-  "golang.org/x/term"
+	"errors"
+	"fmt"
+	"os"
+	"sort"
+	"strings"
+
+	log "k8s.io/klog"
+
+	"golang.org/x/term"
 )
 
 type Screen struct {
-  grid *Grid
+	grid *Grid
 }
 
 func NewScreen(g *Grid) *Screen {
-  return &Screen{
-    grid: g,
-  }
+	return &Screen{
+		grid: g,
+	}
 }
 
 func (s *Screen) FitToWidth(max int) error {
-  return nil
+	return nil
+}
+
+func sortDescending(g *Grid) []*Cell {
+	tmp := make([]*Cell, len(g.cells))
+	copy(tmp, g.cells)
+	sort.Slice(tmp, func(i, j int) bool {
+		return g.cells[i].width > g.cells[j].width
+	})
+	return tmp
 }
 
 func (s *Screen) guessNumLines(max int) int {
-  guessMinNum := 0
-  totalSoFar := 0
-  numCells := len(s.grid.cells)
-  cells := reverse(s.grid.cells)
-  for _, c := range cells {
-    if c.width + totalSoFar <= max {
-      guessMinNum += 1;
-      totalSoFar += c.width
-    } else {
-      guessMaxLines := numCells / guessMinNum
-      if numCells % guessMinNum != 0 {
-        guessMaxLines += 1
-      }
-      return guessMaxLines
-    }
-    totalSoFar += s.grid.options.padding.Width()
-  }
-  return 1
+	guessMinNum := 0
+	totalSoFar := 0
+	numCells := len(s.grid.cells)
+	cells := sortDescending(s.grid)
+	for _, c := range cells {
+		log.Info("Current total: ", c.width+totalSoFar)
+		if c.width+totalSoFar <= max {
+			guessMinNum += 1
+			totalSoFar += c.width
+		} else {
+			guessMaxLines := numCells / guessMinNum
+			log.Info("Guess: ", guessMaxLines, numCells, guessMinNum)
+			if numCells%guessMinNum != 0 {
+				guessMaxLines += 1
+			}
+			return guessMaxLines
+		}
+		totalSoFar += s.grid.options.padding.Width()
+	}
+	return 1
 }
 
-func reverse(cells []*Cell) []*Cell {
-  numCells := len(cells)
-  reversed := make([]*Cell, numCells)
-  for i, c := range cells {
-    reversed[numCells - i - 1] = c
-  }
-  return reversed
+func (s *Screen) getCellWidths() []int {
+	widths := make([]int, len(s.grid.cells))
+	for i, c := range s.grid.cells {
+		widths[i] = c.width
+	}
+	return widths
 }
 
-func getCellWidths(cells []*Cell) []int {
-  widths := make([]int, len(cells))
-  for i, c := range(cells) {
-    widths[i] = c.width
-  }
-  return widths
+func (s *Screen) getWidestCell() []int {
+	widest := 0
+	for _, c := range s.grid.cells {
+		if c.width > widest {
+			widest = c.width
+		}
+	}
+	return []int{widest}
 }
 
 func sumWidths(widths []int) int {
-  sum := 0
-  for _, w := range widths {
-    sum += w;
-  }
-  return sum
+	sum := 0
+	for _, w := range widths {
+		sum += w
+	}
+	return sum
 }
 
 func (s *Screen) getColumnWidths(numLines int, numColumns int) *Dimensions {
-  widths := make([]int, numColumns)
-  for i, c := range s.grid.cells {
-    index := i
-    switch s.grid.options.direction {
-    case LeftToRight:
-      index = i % numColumns
-    case TopToBottom:
-      index = i / numLines
-    }
-    widths[index] = max(widths[index], c.width)
-  }
-  return &Dimensions{
-    widths: widths,
-    lines: numLines,
-  }
+	// log.Infof("Lines: %d; Columns: %d", numLines, numColumns)
+	widths := make([]int, numColumns)
+	for i, c := range s.grid.cells {
+		var index int
+		switch s.grid.options.direction {
+		case LeftToRight:
+			index = i % numColumns
+		case TopToBottom:
+			index = (i / numLines) % numColumns
+		}
+		// log.Infof("i: %d; index: %d", i, index)
+		widthAndPadding := c.width + s.grid.options.padding.Width()
+		widths[index] = max(widths[index], widthAndPadding)
+	}
+	return &Dimensions{
+		widths: widths,
+		lines:  numLines,
+	}
 }
 
 func max(a int, b int) int {
-  if a > b {
-    return a
-  }
-  return b
+	if a > b {
+		return a
+	}
+	return b
 }
 
 func (s *Screen) dimensionsFromWidth(max int) (*Dimensions, error) {
-  if s.grid.widestCell > max {
-    return nil, errors.New("Cannot fit grid into screen smaller than widest cell")
-  }
+	if s.grid.widestCell > max {
+		return nil, errors.New("cannot fit grid into screen smaller than widest cell")
+	}
 
+	numCells := len(s.grid.cells)
+	if numCells == 0 {
+		return &Dimensions{
+			lines:  0,
+			widths: make([]int, 0),
+		}, nil
+	}
+	if numCells == 1 {
+		return &Dimensions{
+			lines:  1,
+			widths: []int{s.grid.cells[0].width},
+		}, nil
+	}
+	guessNumLines := s.guessNumLines(max)
+	log.Infoln("Guess num lines", guessNumLines)
 
-  numCells := len(s.grid.cells)
-  if numCells == 0 {
-    return &Dimensions{
-      lines: 0,
-      widths: make([]int, 0),
-    }, nil
-  }
-  if numCells == 1 {
-    return &Dimensions{
-      lines: 1,
-      widths: []int{s.grid.cells[0].width},
-    }, nil
-  }
-  guessNumLines := s.guessNumLines(max)
+	if guessNumLines == 1 {
+		return &Dimensions{
+			lines:  1,
+			widths: s.getCellWidths(),
+		}, nil
+	}
 
-  if guessNumLines == 1 {
-    return &Dimensions{
-      lines: 1,
-      widths: getCellWidths(s.grid.cells),
-    }, nil
-  }
+	smallestDimensions := &Dimensions{
+		lines:  len(s.grid.cells),
+		widths: s.getWidestCell(),
+	}
+	for lines := len(s.grid.cells) / 2; lines > 0; lines-- {
+		numColumns := numCells / lines
+		log.Infof("numColumns: %d; remainder: %d", numColumns, numCells%lines)
 
-  var smallestDimensions *Dimensions
-  for lines := guessNumLines; lines > 0; lines-- {
-    numColumns := numCells / lines
+		numLines := lines
+		if numCells%lines != 0 {
+			numLines++
+		}
 
-    if numCells % lines != 0 {
-      numColumns += 1
-    }
+		totalSeparatorWidth := (numColumns - 1) * s.grid.options.padding.Width()
+		log.Infof("totalSeparatorWidth: %d; max: %d", totalSeparatorWidth, max)
 
-    totalSeparatorWidth := (numColumns - 1) * s.grid.options.padding.Width()
+		if max < totalSeparatorWidth {
+			continue
+		}
 
-    if max < totalSeparatorWidth {
-      continue
-    }
+		adjustedWidth := max - totalSeparatorWidth
+		potentialDimensions := s.getColumnWidths(numLines, numColumns)
 
-    adjustedWidth := max - totalSeparatorWidth;
-    potentialDimensions := s.getColumnWidths(lines, numColumns)
+		totalSum := sumWidths(potentialDimensions.widths)
+		log.Infof("adjustedWidth: %d; widths: %v; totalSum: %d", adjustedWidth, potentialDimensions.widths, totalSum)
 
-    if sumWidths(potentialDimensions.widths) < adjustedWidth {
-      smallestDimensions = potentialDimensions
-    } else {
-      break
-    }
-  }
-  return smallestDimensions, nil
+		if totalSum < adjustedWidth {
+			smallestDimensions = potentialDimensions
+		} else {
+			continue
+		}
+	}
+	log.Infoln("Smalles dimensions", smallestDimensions)
+	return smallestDimensions, nil
 }
 
 func (s *Screen) Print() error {
-  width, _, err := term.GetSize(int(os.Stdin.Fd()))
-  if err != nil {
-    return err
-  }
-  dimensions, err := s.dimensionsFromWidth(width)
-  if err != nil {
-    return err
-  }
-  numWidths := len(dimensions.widths)
-  numCells := len(s.grid.cells)
-  for y := 0; y < dimensions.lines; y++ {
-    for x := 0; x < numWidths; x++ {
-      index := 0
-      switch s.grid.options.direction {
-      case LeftToRight:
-        index = y * numWidths + x
-      case TopToBottom:
-        index = y + dimensions.lines * x
-      }
-      log.Printf("x: %d, y: %d, index: %d\n", x, y, index)
-      if index >= numCells {
-        continue
-      }
+	width, _, err := term.GetSize(int(os.Stdin.Fd()))
+	if err != nil {
+		return err
+	}
+	log.Infoln("Width", width)
+	dimensions, err := s.dimensionsFromWidth(width)
+	log.Infoln("dimensions, err", dimensions, err)
+	if err != nil {
+		return err
+	}
+	log.Infoln("Dimension widths", dimensions.widths)
+	numWidths := len(dimensions.widths)
+	log.Infoln("num widths", numWidths)
+	numCells := len(s.grid.cells)
+	log.Infoln("num cells", numCells)
+	log.Infof("Options: %v", s.grid.options)
+	for y := 0; y < dimensions.lines; y++ {
+		for x := 0; x < numWidths; x++ {
+			index := 0
+			switch s.grid.options.direction {
+			case LeftToRight:
+				index = y*numWidths + x
+			case TopToBottom:
+				index = y + dimensions.lines*x
+			}
+			// fmt.Infof("|x: %d, y: %d, index: %d, numCells: %d\n", x, y, index, numCells)
+			if index >= numCells {
+				// log.Infoln("Adding newline")
+				// fmt.Infof("\n")
+				break
+			}
 
-      cell := s.grid.cells[index]
-      if x == numWidths - 1 {
-        switch cell.alignment {
-        case Left:
-          fmt.Printf("%s\n", cell.content)
-        case Right:
-          extraSpaces := dimensions.widths[x] - cell.width
-          fmt.Printf("%s%s\n", strings.Repeat(" ", extraSpaces), cell.content)
-        }
-      } else {
-        filling := s.grid.options.padding.Padding(cell.alignment)
-        switch cell.alignment {
-        case Left:
-          extraSpaces := dimensions.widths[x] - cell.width - len(filling)
-          fmt.Printf("%s%s%s", cell.content, strings.Repeat(" ", extraSpaces), filling)
-        case Right:
-          extraSpaces := dimensions.widths[x] - cell.width - len(filling)
-          fmt.Printf("%s%s%s", strings.Repeat(" ", extraSpaces), cell.content, filling)
-        }
-      }
-    }
-  }
-  return nil
+			cell := s.grid.cells[index]
+			if x == numWidths-1 {
+				switch cell.alignment {
+				case Left:
+					fmt.Printf("%s\n", cell.content)
+				case Right:
+					extraSpaces := dimensions.widths[x] - cell.width
+					fmt.Printf("%s%s\n", strings.Repeat(" ", max(extraSpaces, 0)), cell.content)
+				}
+			} else {
+				filling := s.grid.options.padding.Padding(cell.alignment)
+				// log.Infof("Filling: '%s'", filling)
+				extraSpaces := dimensions.widths[x] - cell.width - len(filling)
+				// log.Infof("Extra spaces: %d, widths: %v, width: %d", extraSpaces, dimensions.widths[x], cell.width)
+				switch cell.alignment {
+				case Left:
+					fmt.Printf("%s%s%s", cell.content, strings.Repeat(" ", max(0, extraSpaces)), filling)
+				case Right:
+					fmt.Printf("%s%s%s", strings.Repeat(" ", max(0, extraSpaces)), cell.content, filling)
+				}
+			}
+		}
+	}
+	fmt.Println("")
+	return nil
 }

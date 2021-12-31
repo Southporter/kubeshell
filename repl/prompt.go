@@ -2,20 +2,20 @@ package repl
 
 import (
 	"fmt"
-	"log"
 
 	"github.com/peterh/liner"
 	"github.com/ssedrick/kubeshell/repl/state"
+	log "k8s.io/klog"
 )
 
 type Prompt struct {
-	state   *state.State
+	state *state.State
 	liner *liner.State
 }
 
 func NewPrompt(s *state.State) Prompt {
 	return Prompt{
-		state:   s,
+		state: s,
 		liner: liner.NewLiner(),
 	}
 }
@@ -25,10 +25,10 @@ func (p *Prompt) Get() (string, error) {
 	if input, err := p.liner.Prompt(prompt); err == nil {
 		return input, err
 	} else if err == liner.ErrPromptAborted {
-		log.Print("Got err aborted")
+		log.Info("Got err aborted")
 		return "", err
 	} else {
-		log.Print("Got a different error", err)
+		log.Info("Got a different error", err)
 		return "", nil
 	}
 }

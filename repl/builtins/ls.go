@@ -2,11 +2,11 @@ package builtins
 
 import (
 	"errors"
-	"log"
 	"strings"
 
 	"github.com/ssedrick/kubeshell/repl/cmd"
 	"github.com/ssedrick/kubeshell/repl/display"
+	log "k8s.io/klog"
 )
 
 func printAllApiResources(cmd *cmd.Command, namespaced bool) error {
@@ -19,24 +19,26 @@ func printAllApiResources(cmd *cmd.Command, namespaced bool) error {
 		return err
 	}
 
-  displayOptions := display.DefaultOptions()
-  displayOptions.ChangeDirection(display.TopToBottom)
-  resources := display.NewGridWithOptions(displayOptions)
+	displayOptions := display.DefaultOptions()
+	displayOptions.ChangeDirection(display.TopToBottom)
+	displayOptions.ChangePadding(display.NewWhitespacePadding(1))
+	resources := display.NewGridWithOptions(displayOptions)
 	for _, item := range list {
 		if len(item.APIResources) != 0 {
 			for _, resource := range item.APIResources {
 				if len(resource.Verbs) != 0 {
 					if namespaced == resource.Namespaced {
-            cell := display.NewCell(resource.Name)
-            log.Println("Cell: ", resource.Name)
-            resources.AddCell(&cell)
+						cell := display.NewCell(resource.Name)
+						log.Infoln("Cell: ", resource.Name)
+						resources.AddCell(cell)
 					}
 				}
 			}
 		}
 	}
-  screen := display.NewScreen(&resources)
-  return screen.Print()
+	resources.Sort()
+	screen := display.NewScreen(resources)
+	return screen.Print()
 }
 
 func pathToFolders(cwd string) []string {
@@ -44,7 +46,7 @@ func pathToFolders(cwd string) []string {
 	for len(parts) > 0 && parts[0] == "" {
 		parts = parts[1:]
 	}
-	log.Print("parts", parts, len(parts))
+	log.Info("parts", parts, len(parts))
 	return parts
 }
 
@@ -54,7 +56,7 @@ func Ls(cmd *cmd.Command) error {
 	case 0:
 		// print all resource types
 		err := printAllApiResources(cmd, false)
-		log.Print("error", err)
+		log.Info("error", err)
 		return err
 	case 1:
 		if parts[0] == "namespaces" {

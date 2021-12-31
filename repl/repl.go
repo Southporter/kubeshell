@@ -16,9 +16,10 @@ import (
 type commandHandler = func(*cmd.Command) error
 
 var commands = map[string]commandHandler{
-	"ls":  builtins.Ls,
-	"pwd": builtins.Pwd,
-	"cd":  builtins.Cd,
+	"ls":   builtins.Ls,
+	"pwd":  builtins.Pwd,
+	"cd":   builtins.Cd,
+	"exit": builtins.Exit,
 }
 
 func handleCommand(command string, state *state.State) {
