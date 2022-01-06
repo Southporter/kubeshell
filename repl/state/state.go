@@ -45,29 +45,31 @@ func (s *State) Load(cmd *cobra.Command) error {
 
 	namespace, _, err := kubeConfig.Namespace()
 	if err != nil {
-		return errors.New("Could not get namespace from config")
+		return errors.New("could not get namespace from config")
 	}
 	s.Namespace = namespace
 
 	config, err := kubeConfig.ClientConfig()
 	if err != nil {
-		return errors.New("Could not get client config from kubeconfig")
+		return errors.New("could not get client config from kubeconfig")
 	}
 
 	s.restConfig = config
 
 	rawConfig, err := kubeConfig.RawConfig()
 	if err != nil {
-		return errors.New("Could not load raw config")
+		return errors.New("could not load raw config")
 	}
 	s.raw = &rawConfig
 
 	client, err := kubernetes.NewForConfig(config)
 	if err != nil {
-		return errors.New("Could not create kubernetes client from config file")
+		return errors.New("could not create kubernetes client from config file")
 	}
 
 	s.client = client
+
+	s.cwd = "/namespaces/" + s.Namespace
 
 	return nil
 }
@@ -76,12 +78,20 @@ func (s *State) CurrentDirectory() string {
 	return s.cwd
 }
 
+func (s *State) SetCurrentDirectory(dir string) {
+	s.cwd = dir
+}
+
 func (s *State) CurrentCluster() string {
 	return s.raw.CurrentContext
 }
 
 func (s *State) ToDiscoveryClient() (discovery.DiscoveryInterface, error) {
 	return discovery.NewDiscoveryClientForConfig(s.restConfig)
+}
+
+func (s *State) ToClient() *kubernetes.Clientset {
+	return s.client
 }
 
 func (s *State) GetTerminalWidth() (int, error) {

@@ -1,9 +1,10 @@
 package repl
 
 import (
-	"log"
 	"os"
 	"strings"
+
+	log "k8s.io/klog"
 
 	"github.com/fatih/color"
 	"github.com/spf13/cobra"
@@ -44,7 +45,7 @@ func Start(cmd *cobra.Command, args []string) {
 	// Set up kube client
 	s := state.NewState()
 	if err := s.Load(cmd); err != nil {
-		log.Println("Error loading kubernetes state")
+		log.Infoln("Error loading kubernetes state")
 		os.Exit(2)
 	}
 
@@ -54,10 +55,10 @@ func Start(cmd *cobra.Command, args []string) {
 	for {
 		input, err := p.Get()
 		if err != nil {
-			log.Print("Error reading line", err)
+			log.Info("Error reading line", err)
 			return
 		}
-		log.Print("Got input: ", input)
+		log.Info("Got input: ", input)
 
 		handleCommand(input, &s)
 	}

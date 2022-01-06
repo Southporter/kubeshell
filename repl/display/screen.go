@@ -131,7 +131,7 @@ func (s *Screen) dimensionsFromWidth(max int) (*Dimensions, error) {
 		}, nil
 	}
 	guessNumLines := s.guessNumLines(max)
-	log.Infoln("Guess num lines", guessNumLines)
+	log.V(2).Infoln("Guess num lines", guessNumLines)
 
 	if guessNumLines == 1 {
 		return &Dimensions{
@@ -146,7 +146,7 @@ func (s *Screen) dimensionsFromWidth(max int) (*Dimensions, error) {
 	}
 	for lines := len(s.grid.cells) / 2; lines > 0; lines-- {
 		numColumns := numCells / lines
-		log.Infof("numColumns: %d; remainder: %d", numColumns, numCells%lines)
+		log.V(2).Infof("numColumns: %d; remainder: %d", numColumns, numCells%lines)
 
 		numLines := lines
 		if numCells%lines != 0 {
@@ -154,7 +154,7 @@ func (s *Screen) dimensionsFromWidth(max int) (*Dimensions, error) {
 		}
 
 		totalSeparatorWidth := (numColumns - 1) * s.grid.options.padding.Width()
-		log.Infof("totalSeparatorWidth: %d; max: %d", totalSeparatorWidth, max)
+		log.V(2).Infof("totalSeparatorWidth: %d; max: %d", totalSeparatorWidth, max)
 
 		if max < totalSeparatorWidth {
 			continue
@@ -164,7 +164,7 @@ func (s *Screen) dimensionsFromWidth(max int) (*Dimensions, error) {
 		potentialDimensions := s.getColumnWidths(numLines, numColumns)
 
 		totalSum := sumWidths(potentialDimensions.widths)
-		log.Infof("adjustedWidth: %d; widths: %v; totalSum: %d", adjustedWidth, potentialDimensions.widths, totalSum)
+		log.V(2).Infof("adjustedWidth: %d; widths: %v; totalSum: %d", adjustedWidth, potentialDimensions.widths, totalSum)
 
 		if totalSum < adjustedWidth {
 			smallestDimensions = potentialDimensions
@@ -172,7 +172,7 @@ func (s *Screen) dimensionsFromWidth(max int) (*Dimensions, error) {
 			continue
 		}
 	}
-	log.Infoln("Smalles dimensions", smallestDimensions)
+	log.V(2).Infoln("Smalles dimensions", smallestDimensions)
 	return smallestDimensions, nil
 }
 
@@ -181,18 +181,18 @@ func (s *Screen) Print() error {
 	if err != nil {
 		return err
 	}
-	log.Infoln("Width", width)
+	log.V(2).Infoln("Width", width)
 	dimensions, err := s.dimensionsFromWidth(width)
-	log.Infoln("dimensions, err", dimensions, err)
+	log.V(2).Infoln("dimensions, err", dimensions, err)
 	if err != nil {
 		return err
 	}
-	log.Infoln("Dimension widths", dimensions.widths)
+	log.V(2).Infoln("Dimension widths", dimensions.widths)
 	numWidths := len(dimensions.widths)
-	log.Infoln("num widths", numWidths)
+	log.V(2).Infoln("num widths", numWidths)
 	numCells := len(s.grid.cells)
-	log.Infoln("num cells", numCells)
-	log.Infof("Options: %v", s.grid.options)
+	log.V(2).Infoln("num cells", numCells)
+	log.V(2).Infof("Options: %v", s.grid.options)
 	for y := 0; y < dimensions.lines; y++ {
 		for x := 0; x < numWidths; x++ {
 			index := 0
